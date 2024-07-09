@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="https://www.google.com/recaptcha/api.js"></script>
+
+</head>
+<body>
+<form action="/submit" method="post" onsubmit="return validateForm()">
+    <!-- Your form fields go here -->
+
+
+    <button class="g-recaptcha"
+            data-sitekey="6LfaI1IpAAAAAKmXuxNPc16iA9Edpir3jemo1-K_"
+            data-callback='onSubmit'
+            data-action='submit'>Submit</button>
+
+</form>
+
+<script>
+    function onSubmit(token) {
+        document.getElementById("demo-form").submit();
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <title>Chat Application</title>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+
+        #chatArea {
+            overflow-y: scroll;
+            max-height: 300px;
+        }
+
+        .mt-2 {
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+<!-- Form Đăng Ký -->
+<div class="container mt-4">
+    <h2>Đăng Ký</h2>
+    <form id="registrationForm">
+        <div class="form-group">
+            <label for="fullName">Họ và Tên</label>
+            <input type="text" class="form-control" id="fullName" name="full_name" required>
+        </div>
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" class="form-control" id="email" name="email" required>
+        </div>
+        <div class="form-group">
+            <label for="username">Tên người dùng</label>
+            <input type="text" class="form-control" id="username" name="username" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Mật khẩu</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Keyfaceid</label>
+            <input type="text" class="form-control" id="keyfaceid" name="keyfaceid" disabled>
+        </div>
+        <button class="btn btn-primary" onclick="enrollNewUser()">GET KEY FACEID</button>
+        <div class="form-group">
+            <label for="role">Vai trò</label>
+            <select class="form-control" id="role" name="role">
+                <option value="ROLE_USER">Người dùng</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Đăng Ký</button>
+    </form>
+</div>
+
+<!-- Phần chat hiện có của bạn ở đây -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<div id="faceio-modal"></div>
+<script src="https://cdn.faceio.net/fio.js"></script>
+<script>
+    // Mã JavaScript của bạn cho phần chat và FaceIO
+    const faceio = new faceIO("fioae582"); // Replace with your application Public ID
+
+    function enrollNewUser() {
+        faceio.enroll({
+
+            "locale": "auto", // Default user locale
+            "userConsent": false, // Set to true if you have already collected user consent
+
+            "payload": {
+                /* The payload we want to associate with this particular user
+                * which is forwarded back to us on each of his future authentication...
+                */
+
+                "name": "new", // Example of dummy ID linked to this particular user
+                "email": "john.doe@example.com"
+            }
+        }).then(userInfo => {
+            // User Successfully Enrolled!
+            $('#keyfaceid').val(userInfo.facialId);
+
+
+
+            console.log(userInfo);
+            // handle success, save the facial ID, redirect to dashboard...
+            //
+            // faceio.restartSession() let you enroll another user again (without reloading the entire HTML page)
+        }).catch(errCode => {
+            // handle enrollment failure. Visit:
+            // https://faceio.net/integration-guide#error-codes
+            // for the list of all possible error codes
+            handleError(errCode);
+
+            // If you want to restart the session again without refreshing the current TAB. Just call:
+            faceio.restartSession();
+            // restartSession() let you enroll the same or another user again (in case of failure) without refreshing the entire page.
+        });
+    }
+
+
+
+
+
+    $(document).ready(function() {
+        // Xử lý khi form đăng ký được gửi
+        $('#registrationForm').on('submit', function(e) {
+            e.preventDefault();
+
+            // Thu thập dữ liệu từ form
+            var formData = {
+                fullname: $('#fullName').val(),
+                email: $('#email').val(),
+                username: $('#username').val(),
+                password: $('#password').val(),
+                role: $('#role').val(),
+                keyfaceid: $('#keyfaceid').val(),
+                userId: $('#keyfaceid').val()
+            };
+
+            // Gửi dữ liệu đến server
+            $.ajax({
+                url: 'http://localhost:8080/api/users',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(formData),
+                success: function(response) {
+                    alert('Đăng ký thành công');
+                    // Xử lý thêm ở đây nếu cần
+                },
+                error: function(xhr, status, error) {
+                    alert('Đăng ký thất bại: ' + error);
+                }
+            });
+        });
+    });
+</script>
+</body>
+</html>

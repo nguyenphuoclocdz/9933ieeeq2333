@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.2/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+    <!-- Thêm liên kết đến Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <title>Chat Application</title>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+
+        #chatArea {
+            overflow-y: scroll;
+            max-height: 300px;
+        }
+
+        .mt-2 {
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-4">
+    <div class="form-group">
+        <label for="chatArea">Chat Area</label>
+        <textarea id="chatArea" class="form-control" rows="10" readonly></textarea>
+    </div>
+    <div class="row mt-2">
+        <div class="col-md-6">
+            <label for="username">Username</label>
+            <input type="text" id="username" value="admin" class="form-control" disabled>
+        </div>
+    </div>
+    <div class="row mt-2">
+        <div class="col-md-12">
+            <label for="messageInput">Message</label>
+            <input type="text" id="messageInput" class="form-control" onkeypress="handleKeyPress(event)" autofocus>
+        </div>
+    </div>
+    <div class="row mt-2">
+        <div class="col-md-6">
+            <button onclick="sendMessage()" class="btn btn-primary btn-block">Send</button>
+        </div>
+        <div class="col-md-6">
+            <button onclick="clearMessages()" class="btn btn-danger btn-block">Clear Messages</button>
+        </div>
+    </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<div id="faceio-modal"></div>
+<script src="https://cdn.faceio.net/fio.js"></script>
+
+
+<script>
+    const faceio = new faceIO("fioae582"); // Replace with your application Public ID
+
+    function authenticateUser() {
+        // Start the facial authentication process (Identify a previously enrolled user)
+        faceio.authenticate({
+            "locale": "auto" // Default user locale
+        }).then(userData => {
+
+            console.log('key:', userData.facialId)
+            // Dữ liệu cần gửi
+            const dataToSend = {
+                key: userData.facialId
+            }
+
+            $.ajax({
+                type: 'POST',
+                url: '/api/users/faceid',
+                data: JSON.stringify(dataToSend),
+                contentType: 'application/json',
+
+                success: function (responsee) {
+
+                    // Check if 'data' field exists
+                    var userDataa = JSON.parse(responsee)
+
+                    // Lấy giá trị của trường "fullname"
+                    var fullname = userDataa.fullname
+                    if (fullname) {
+                        $('#username').val(fullname);
+                        alert("Xin chào: " + fullname)
+                    } else {
+                        console.error('Error: Field "fullname" is null or undefined.')
+                    }
+                },
+                error: function (error) {
+                    console.error('Lỗi khi gửi request:', error)
+                }
+            })
+            connect();
+
+            console.log("Success, user recognized")
+            // Grab the facial ID linked to this particular user which will be same
+            // for each of his successful future authentication. FACEIO recommend
+            // that your rely on this ID if you plan to uniquely identify
+            // all enrolled users on your backend for example.
+            console.log("Linked facial Id: " + userData)
+            // Grab the arbitrary data you have already linked (if any) to this particular user
+            // during his enrollment via the payload parameter the enroll() method takes.
+            console.log("Associated Payload: " + JSON.stringify(userData.payload))
+            // {"whoami": 123456, "email": "john.doe@example.com"} set via enroll()
+            //
+            // faceio.restartSession() let you authenticate another user again (without reloading the entire HTML page)
+            //
+        }).catch(errCode => {
+            // handle authentication failure. Visit:
+            // https://faceio.net/integration-guide#error-codes
+            // for the list of all possible error codes
+            handleError(errCode);
+
+            // If you want to restart the session again without refreshing the current TAB. Just call:
+            faceio.restartSession();
+            // restartSession() let you authenticate the same user again (in case of failure)
+            // without refreshing the entire page.
+            // restartSession() is available starting from the PRO plan and up, so think of upgrading your app
+            // for user usability.
+        });
+    }
+
+
+    var stompClient = null;
+    var hasUnreadMessages = false;
+
+    function connect() {
+        var socket = new SockJS('/ws');
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, function (frame) {
+            stompClient.subscribe('/topic/messages', function (response) {
+                var messageContent = JSON.parse(response.body).username + " : " + JSON.parse(response.body).content;
+                if(JSON.parse(response.body).content === "/clear"){
+                    clearMessages();
+                    $('#chatArea').val('');
+                }else{
+                    addMessageToChat(messageContent);
+                }
+
+
+                if (document.hidden) {
+                    // Nếu đang ở trang/tab khác, đặt hasUnreadMessages thành true
+                    hasUnreadMessages = true;
+                    playNotificationSound();
+                    document.title = "New Message!";
+                }
+            });
+            stompClient.send("/app/chat", {}, JSON.stringify({'content': $('#username').val()+' Vừa đăng nhập!', 'username': 'Thông báo hệ thống'}));
+        });
+
+        // Sự kiện khi thay đổi trạng thái hiển thị của trang/tab
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) {
+                // Nếu quay lại trang/tab đang focus, đặt hasUnreadMessages thành false
+                hasUnreadMessages = false;
+                document.title = "WebSocket Chat";
+            }
+        });
+    }
+
+    function sendMessage() {
+        var message = $('#messageInput').val();
+        var username = $('#username').val();
+        stompClient.send("/app/chat", {}, JSON.stringify({'content': message, 'username': username}));
+        $('#messageInput').val('');
+    }
+
+    function handleKeyPress(event) {
+        if (event.key === "Enter") {
+            sendMessage();
+        }
+    }
+
+    function addMessageToChat(messageContent) {
+        var chatArea = $('#chatArea');
+        chatArea.val(chatArea.val() + messageContent + '\n');
+
+        // Cuộn xuống cuối của #chatArea
+        chatArea.scrollTop(chatArea[0].scrollHeight);
+
+        // Phát âm thanh nếu có tin nhắn mới và đang ở trang/tab khác
+        if (hasUnreadMessages) {
+            playNotificationSound();
+        }
+    }
+
+    function loadPreviousMessages() {
+        $.ajax({
+            url: '/getAllMessage',
+            type: 'GET',
+            dataType: 'json',
+            success: function (response) {
+                if (response.status === 'success') {
+                    var messages = response.data;
+                    for (var i = 0; i < messages.length; i++) {
+                        var messageContent = messages[i].username + " : " + messages[i].content;
+                        addMessageToChat(messageContent);
+                    }
+                } else {
+                    console.error('Failed to retrieve previous messages. Server returned:', response);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Failed to retrieve previous messages. Server error:', error);
+            }
+        });
+    }
+
+    function clearMessages() {
+        $.ajax({
+            url: '/deleteAllMessage',
+            type: 'GET', // Assuming your backend endpoint is configured to handle POST requests
+            success: function () {
+                $('#chatArea').val('');
+                hasUnreadMessages = false;
+                document.title = "WebSocket Chat";
+            },
+            error: function (xhr, status, error) {
+                console.error('Failed to clear messages. Server error:', error);
+            }
+        });
+
+
+    }
+
+    function playNotificationSound() {
+        // Đặt đường dẫn đến file âm thanh của bạn
+        var audio = new Audio('ting.mp3');
+        audio.play();
+    }
+
+    function showUserJoinedNotification(username) {
+        var notificationDiv = $('<div class="notification">User ' + username + ' joined the chat</div>');
+        $('#notificationArea').append(notificationDiv);
+
+        // Tự động xóa thông báo sau một khoảng thời gian nhất định
+        setTimeout(function () {
+            notificationDiv.remove();
+        }, 5000); // Xóa thông báo sau 5 giây
+    }
+
+
+    $(document).ready(function () {
+        authenticateUser();
+        loadPreviousMessages();
+    });
+
+    window.addEventListener('beforeunload', function (e) {
+        // Gửi một tin nhắn trước khi tab bị đóng
+        var username = $('#username').val();
+        var message = username + " Vừa đăng xuất!";
+        stompClient.send("/app/chat", {}, JSON.stringify({'content': message, 'username': 'Thông báo hệ thống'}));
+
+        // Hủy bỏ sự kiện trước khi đóng tab (tùy theo trình duyệt, sẽ hiển thị thông báo xác nhận đóng tab)
+        delete e['returnValue'];
+    });
+</script>
+
+<!-- Thêm liên kết đến Bootstrap JavaScript và Popper.js -->
+
+</body>
+</html>

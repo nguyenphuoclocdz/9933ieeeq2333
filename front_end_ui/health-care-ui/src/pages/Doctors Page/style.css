@@ -1,0 +1,8 @@
+:root {
+    --color1: #f7fcfd;
+    --color2: #CF7D4E;
+}
+
+body{
+    @apply tw-bg-[--color1];    
+}

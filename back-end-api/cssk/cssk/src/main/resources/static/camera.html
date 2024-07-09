@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notification Example</title>
+</head>
+<body>
+
+<button onclick="sendNotification()">Send Notification</button>
+
+<script>
+  $(document).ready(function() {
+    sendNotification();
+  });
+  function sendNotification() {
+    if (!("Notification" in window)) {
+      console.log("Trình duyệt không hỗ trợ thông báo.");
+    } else {
+      if (Notification.permission === "granted") {
+        var notification = new Notification("Thông báo mới", {
+          body: "Có 1 người già đã được tạo.",
+          icon: "https://img.upanh.tv/2024/03/28/taoanhdep_free_fire_28130.png",
+          data: { url: "http://localhost:3001/elderly/date-tables-elderly" }
+        });
+
+        notification.onclick = function(event) {
+          event.preventDefault(); // Ngăn chặn trình duyệt mở liên kết mặc định
+          window.open(notification.data.url, "_blank"); // Mở liên kết khi thông báo được nhấp vào
+        };
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then(function (permission) {
+          if (permission === "granted") {
+            var notification = new Notification("Thông báo mới", {
+              body: "Có 1 người già đã được tạo.",
+              icon: "https://img.upanh.tv/2024/03/28/taoanhdep_free_fire_28130.png",
+              data: { url: "http://localhost:3001/elderly/date-tables-elderly" }
+            });
+
+
+            notification.onclick = function(event) {
+              event.preventDefault(); // Ngăn chặn trình duyệt mở liên kết mặc định
+              window.open(notification.data.url, "_blank"); // Mở liên kết khi thông báo được nhấp vào
+            };
+          }
+        });
+      }
+    }
+  }
+
+</script>
+
+</body>
+</html>

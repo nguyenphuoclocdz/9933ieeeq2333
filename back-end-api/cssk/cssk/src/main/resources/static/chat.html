@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+</head>
+<body>
+<h2>Simple Chat</h2>
+<div>
+    <label for="username">Username:</label>
+    <input type="text" id="username" placeholder="Enter your username" />
+    <button type="button" onclick="connectToSSE()">Connect</button>
+</div>
+<div id="chatArea"></div>
+<div>
+    <input type="text" id="messageInput" placeholder="Type your message..." />
+    <button type="button" onclick="sendMessage()">Send</button>
+</div>
+
+<script>
+    let username;
+    let eventSource;
+
+    function connectToSSE() {
+        username = document.getElementById("username").value;
+        if (EventSource) {
+            eventSource = new EventSource("/sse?username=" + username);
+            eventSource.onmessage = function (event) {
+                const chatArea = document.getElementById("chatArea");
+                chatArea.innerHTML = "<p>" + event.data + "</p>";
+            };
+        } else {
+            console.error("EventSource not supported");
+        }
+    }
+
+    function sendMessage() {
+        const messageInput = document.getElementById("messageInput").value;
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/send-message?username=" + username + "&message=" + encodeURIComponent(messageInput), true);
+        xhr.send();
+    }
+</script>
+</body>
+</html>

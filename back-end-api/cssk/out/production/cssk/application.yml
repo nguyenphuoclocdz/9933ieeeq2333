@@ -1,0 +1,41 @@
+server:
+  port: 8080
+  error:
+    include-message: always
+
+spring:
+  data:
+    mongodb:
+      host: 103.167.89.208
+      port: 27017
+      database: cssk
+      username: vienduonglao_cssk
+      password: vienduonglao_cssk
+  jpa:
+    hibernate:
+      ddl-auto: update
+      show-sql: true
+      open-in-view: true
+    properties:
+      jakarta:
+        persistence:
+          jpa:
+            compliance: 2.2
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: nguyenphuoclocbt28@gmail.com
+    password: zqrj fgxl wyan nqlk
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+jwt:
+  secret: 1b6bb4ac399b707bd1d37e9a1371b3a4a0764621c5e7933f733b338a8ac614bc
+  expiration: 86400000
+
+
+
+

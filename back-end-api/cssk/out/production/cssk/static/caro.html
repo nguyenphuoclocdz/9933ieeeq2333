@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caro Game</title>
+    <style>
+        #board {
+            display: grid;
+            grid-template-columns: repeat(15, 30px);
+            grid-template-rows: repeat(15, 30px);
+            gap: 1px;
+            border: 1px solid #000;
+        }
+
+        .cell {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #000;
+            cursor: pointer;
+            background-color: #fff;
+        }
+
+        .cell:hover {
+            background-color: #f0f0f0;
+        }
+
+        .cross {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+
+<div id="board">
+    <!-- Ô cờ sẽ được thêm vào đây bằng JavaScript -->
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const board = document.getElementById('board');
+        const socket = new WebSocket('ws://localhost:8080/caro');
+
+        socket.onmessage = function (event) {
+            // Xử lý thông điệp từ server và cập nhật giao diện
+            const data = JSON.parse(event.data);
+            // ...
+
+            // Ví dụ: hiển thị ký tự 'X' hoặc 'O' trên ô cờ
+            const cell = document.getElementById(`cell-${data.row}-${data.col}`);
+            cell.textContent = data.symbol;
+        };
+
+        board.addEventListener('click', function (event) {
+            // Xử lý sự kiện khi người chơi click vào ô cờ
+            const cell = event.target;
+            const row = cell.getAttribute('data-row');
+            const col = cell.getAttribute('data-col');
+
+            // Gửi thông điệp qua WebSocket với tọa độ ô cờ
+            const message = {
+                row: row,
+                col: col,
+                symbol: 'X' // hoặc 'O' tùy thuộc vào lượt chơi
+            };
+            socket.send(JSON.stringify(message));
+        });
+
+        // Hàm tạo bảng chơi
+        function createBoard() {
+            for (let i = 0; i < 15; i++) {
+                for (let j = 0; j < 15; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.setAttribute('data-row', i);
+                    cell.setAttribute('data-col', j);
+                    cell.id = `cell-${i}-${j}`;
+                    board.appendChild(cell);
+                }
+            }
+        }
+
+        createBoard();
+    });
+</script>
+
+</body>
+</html>

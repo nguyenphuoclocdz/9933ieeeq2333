@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Code Scanner</title>
+  <style>
+    #video-container {
+      text-align: center;
+    }
+
+    #video-preview {
+      width: 100%;
+      max-width: 600px;
+    }
+  </style>
+</head>
+<body>
+<div id="video-container">
+  <video id="video-preview" playsinline></video>
+</div>
+
+<script src="https://cdn.rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+<script>document.addEventListener('DOMContentLoaded', function () {
+  let scanner = new Instascan.Scanner({ video: document.getElementById('video-preview') });
+
+  scanner.addListener('scan', function (content) {
+    alert('Scanned: ' + content);
+    // Xử lý logic khi quét thành công ở đây
+  });
+
+  Instascan.Camera.getCameras().then(function (cameras) {
+    if (cameras.length > 0) {
+      scanner.start(cameras[0]); // Sử dụng camera đầu tiên
+    } else {
+      console.error('No cameras found.');
+      alert('No cameras found.');
+    }
+  }).catch(function (e) {
+    console.error(e);
+    alert('Error accessing camera.');
+  });
+});
+</script>
+</body>
+</html>

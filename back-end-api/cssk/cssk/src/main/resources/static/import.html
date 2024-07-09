@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Upload</title>
+</head>
+<body>
+<h1>Excel Upload to MongoDB</h1>
+
+<input type="file" id="fileInput" />
+<button onclick="uploadFile()">Upload</button>
+
+<script>
+    function uploadFile() {
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+
+        if (file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('http://localhost:8080/api/excel/import', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response)
+                .then(data => {
+                    console.log(data);
+                    alert('File uploaded successfully!');
+                })
+                .catch(error => {
+                    console.error(error);
+                    alert('Error uploading the file.');
+                });
+        } else {
+            alert('Please select a file.');
+        }
+    }
+</script>
+</body>
+</html>

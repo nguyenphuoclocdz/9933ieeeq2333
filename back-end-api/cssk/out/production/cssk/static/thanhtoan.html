@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Check</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+<form id="paymentForm">
+    <label for="content">Content:</label><br>
+    <input type="text" id="content" name="content" required><br>
+    <label for="money">Money:</label><br>
+    <input type="number" id="money" name="money" required><br><br>
+    <button type="submit">Submit</button>
+</form>
+
+
+
+<!-- Thẻ img để hiển thị QR code -->
+<img id="qrCodeImage" src="" alt="QR Code" style="display: none;">
+
+<script>
+    $(document).ready(function() {
+        var paymentId; // Biến để lưu trữ ID thanh toán
+
+        // Xử lý khi người dùng gửi biểu mẫu
+        $("#paymentForm").submit(function(event) {
+            // Ngăn chặn hành động mặc định của biểu mẫu
+            event.preventDefault();
+            // Gọi hàm tạo thanh toán với dữ liệu từ biểu mẫu
+            createPayment();
+        });
+
+        function createPayment() {
+            // Lấy dữ liệu từ biểu mẫu
+            var content = $("#content").val();
+            var money = $("#money").val();
+
+            // Dữ liệu JSON cho yêu cầu tạo thanh toán
+            var paymentData = {
+                "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0MSIsImlhdCI6MTcwOTA4NjY5OCwiZXhwIjoxNzA5MTczMDk4fQ.Gb7tYYNvYXGN5pWkZAS1TJwRooAD3oxkmhE_y6kKNjI",
+                "content": content,
+                "money": money
+            };
+
+            // AJAX request để tạo thanh toán
+            $.ajax({
+                url: "http://localhost:8080/api/payment/create",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(paymentData),
+                dataType: "json",
+                success: function(response) {
+                    // Kiểm tra phản hồi và hiển thị QR code nếu thành công
+                    if (response.data) {
+                        // Lưu trữ ID thanh toán từ phản hồi
+                        paymentId = response.id;
+                        // Cập nhật đường dẫn hình ảnh QR code
+                        $("#qrCodeImage").attr("src", response.data);
+                        // Hiển thị hình ảnh QR code
+                        $("#qrCodeImage").show();
+                        // Bắt đầu kiểm tra trạng thái thanh toán sau khi tạo thanh toán thành công
+                        checkPaymentStatus();
+                    }else{
+                        alert("ror");
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error:", error);
+                }
+            });
+        }
+
+        // Function to continuously check payment status
+        // Function để kiểm tra trạng thái thanh toán
+        var intervalId; // Biến để lưu trữ ID của setInterval
+
+        function checkPaymentStatus() {
+            // AJAX request để kiểm tra trạng thái thanh toán
+            $.ajax({
+                url: "http://localhost:8080/api/payment/check/" + paymentId, // Sử dụng paymentId từ phản hồi khi tạo thanh toán
+                type: "GET",
+                dataType: "json",
+                success: function(response) {
+                    // Check trạng thái trong JSON
+                    if (response.status === "success") {
+                        // Hiển thị thông báo thành công
+                        Swal.fire({
+                            title: "Success!",
+                            text: "Payment success!",
+                            icon: "success"
+                        });
+                        // Ngừng chạy hàm setInterval khi trạng thái là "success"
+                        clearInterval(intervalId);
+                        return; // Ngừng chương trình ngay lập tức
+                    } else if (response.status === "error") {
+                        // Nếu không thành công, cập nhật hình ảnh QR code
+                        $("#qrCodeImage").attr("src", response.data);
+                        // Hiển thị hình ảnh QR code
+                        $("#qrCodeImage").show();
+
+                        // Nếu chưa có intervalId, tạo intervalId và kích hoạt kiểm tra liên tục
+                        if (!intervalId) {
+                            intervalId = setInterval(checkPaymentStatus, 1000);
+                        }
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error:", error);
+                }
+            });
+        }
+    });
+</script>
+</body>
+</html>

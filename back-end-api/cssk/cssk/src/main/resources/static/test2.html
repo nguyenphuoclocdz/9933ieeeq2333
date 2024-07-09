@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Chat</title>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.2/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+    <!-- Thêm liên kết đến Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-4">
+    <textarea id="chatArea" class="form-control" rows="10" readonly style="overflow-y: scroll; max-height: 300px;"></textarea>
+    <div class="row mt-2">
+        <div class="col-md-8">
+            <input type="text" id="username" class="form-control"  />
+        </div>
+        <div class="col-md-8">
+            <input type="text" id="messageInput" class="form-control" onkeypress="handleKeyPress(event)" />
+        </div>
+        <div class="col-md-4">
+            <button onclick="sendMessage()" class="btn btn-primary btn-block">Send</button>
+        </div>
+        <div class="col-md-4">
+            <button onclick="clearMessages()" class="btn btn-danger btn-block">Clear Messages</button>
+        </div>
+    </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script>
+    var stompClient = null;
+
+    function connect() {
+        var socket = new SockJS('/ws');
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, function (frame) {
+            stompClient.subscribe('/topic/messages', function (response) {
+                var messageContent = JSON.parse(response.body).username + " : " + JSON.parse(response.body).content;
+                addMessageToChat(messageContent);
+            });
+        });
+    }
+
+    function sendMessage() {
+        var message = $('#messageInput').val();
+        var username = $('#username').val();
+        stompClient.send("/app/chat", {}, JSON.stringify({'content': message, 'username': username}));
+        $('#messageInput').val('');
+    }
+
+    function handleKeyPress(event) {
+        if (event.key === "Enter") {
+            sendMessage();
+        }
+    }
+
+    function addMessageToChat(messageContent) {
+        var chatArea = $('#chatArea');
+        chatArea.val(chatArea.val() + messageContent + '\n');
+
+        // Cuộn xuống cuối của #chatArea
+        chatArea.scrollTop(chatArea[0].scrollHeight);
+    }
+
+    function loadPreviousMessages() {
+        $.ajax({
+            url: 'http://localhost:8080/getAllMessage',
+            type: 'GET',
+            dataType: 'json',
+            success: function (response) {
+                if (response.status === 'success') {
+                    var messages = response.data;
+                    for (var i = 0; i < messages.length; i++) {
+                        var messageContent = messages[i].username + " : " + messages[i].content;
+                        addMessageToChat(messageContent);
+                    }
+                } else {
+                    console.error('Failed to retrieve previous messages. Server returned:', response);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Failed to retrieve previous messages. Server error:', error);
+            }
+        });
+    }
+
+    function clearMessages() {
+        $.ajax({
+            url: 'http://localhost:8080/deleteAllMessage',
+            type: 'GET', // Assuming your backend endpoint is configured to handle POST requests
+            success: $('#chatArea').val(''),
+            error: function (xhr, status, error) {
+                console.error('Failed to clear messages. Server error:', error);
+            }
+        });
+    }
+    $(document).ready(function () {
+        connect();
+        loadPreviousMessages();
+    });
+</script>
+
+<!-- Thêm liên kết đến Bootstrap JavaScript và Popper.js -->
+
+</body>
+</html>
